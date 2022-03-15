@@ -5,7 +5,8 @@ const userAuthentication = async (req, res, next) => {
     const accessToken = cookie_str.split('=')[1]
     jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET, function(err, decodedToken) {
         if (err) {
-            res.status(403).json({ 
+            console.log('Err name: ', err.message)
+            return res.status(403).json({ 
                 user: null, message: 'Access Token is not valid!' 
             })
         }

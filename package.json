@@ -1,5 +1,5 @@
 {
-  "name": "weeting",
+  "name": "weeting_app",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,9 +10,17 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "start": "node index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sieusanh/Weeting_App.git"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sieusanh/Weeting_App/issues"
+  },
+  "homepage": "https://github.com/sieusanh/Weeting_App#readme",
   "dependencies": {
     "bcrypt": "^5.0.1",
     "cookie-parser": "^1.4.6",
@@ -24,8 +32,7 @@
     "http": "^0.0.1-security",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.2.2",
-    "socket.io": "^4.4.1",
-    "socket.io-client": "^4.4.1"
+    "socket.io": "^4.4.1"
   },
   "devDependencies": {
     "concurrently": "^7.0.0",

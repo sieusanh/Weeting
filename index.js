@@ -21,6 +21,11 @@ const csrfProtection = csrf({ cookie: true })
 
 
 const app = express()
+const cors = require('cors');
+app.use(cors({
+    origin: 'http://localhost:8080',
+    // methods: ['GET','POST','DELETE','UPDATE','PUT','PATCH']
+}))
 app.use(express.static('public'))
 app.use(express.json())
 app.use(cookieParser())
@@ -53,11 +58,18 @@ mongoose
     .catch(err => console.log(err))
 
 // Development
-app.get('/', csrfProtection, (req, res) =>
- res.render('/frontend/public/index.html', { csrfToken: req.csrfToken() }))
+// app.get('/', csrfProtection, (req, res) =>
+//     res.render('/frontend/public/index.html', { 
+//         csrfToken: req.csrfToken() 
+//     })
+// )
 
 // Deployment
-// app.get('/', (req, res) => res.render('index.html'))
+app.get('/', csrfProtection, (req, res) => 
+    res.render('index.html', { 
+        csrfToken: req.csrfToken() 
+    })
+)
 app.use('/auth', authRoute)
 app.use('/user', userRoute)
 app.use('/peer', peerRoute)
@@ -68,6 +80,15 @@ io.on('connection', socket => {
     // server tạo biến socket 
     // để quản lý kết nối của mỗi client connect vào
     
+    const transport = socket.conn.transport.name; // in most cases, "polling"
+
+    console.log('Transport name: ', transport)
+
+    socket.conn.on("upgrade", () => {
+        const upgradedTransport = socket.conn.transport.name; // in most cases, "websocket"
+        console.log('Upgraded transport name: ', upgradedTransport)
+    })
+
     //
     socket.on('disconnect', () => {
         OnlineUsers.deleteOne({
