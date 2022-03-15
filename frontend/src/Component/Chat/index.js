@@ -96,6 +96,7 @@ function Chat() {
         e.preventDefault()
         let chatId
         let accepted = true
+        console.log('searchChat: ', searchChat)
         if (searchChat) { 
             console.log('Enter if search chat')
             // Kiểm tra xem trước đó đã connect chưa
