@@ -97,6 +97,7 @@ function Chat() {
         let chatId
         let accepted = true
         if (searchChat) { 
+            console.log('Enter if search chat')
             // Kiểm tra xem trước đó đã connect chưa
             axios.post('/peer/check-chat-exist', {
                 userId1: localStorage.getItem('userId'), 
@@ -104,8 +105,10 @@ function Chat() {
             })
             .then(res => {
                 if (res.data.message === 'Chat not found') {
+                    console.log('Enter Chat not found')
                     setConnectAccepted(false)
                     accepted = false
+                    console.log('Chat not found - accepted: ', accepted)
                     // function myPromise(callback) {
                     //     return new Promise((resolve, reject) => {
                     //         callback()
