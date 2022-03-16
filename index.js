@@ -45,8 +45,9 @@ const io = new Server(httpServer, {
     cors: {
       origin: '*',
       methods: ['GET', 'POST']
-    }
-  })
+    },
+    pingTimeout: 60000
+})
 // const io = new Server(httpServer)
 
 mongoose

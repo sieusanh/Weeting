@@ -1,6 +1,7 @@
 import io from 'socket.io-client'
 import { useState, useEffect } from 'react'
-import { PersonAdd, NotificationsNone, Mood, Send, AttachFile, Image } from '@material-ui/icons'
+import { PersonAdd, NotificationsNone, Mood, Send, 
+    AttachFile, Image } from '@material-ui/icons'
 import { Badge } from '@material-ui/core'
 import axios from 'axios'
 import { useStore, actions } from '../../store'
@@ -37,7 +38,8 @@ function Chat() {
                 origin: "*",
                 credentials: true
             },
-            transports : ['websocket'] 
+            transports : ['websocket'],
+            pingTimeout: 60000 //edit
         })
         setSocket(newSocket)
         newSocket.emit(
