@@ -17,6 +17,11 @@ const UserSchema = new mongoose.Schema(
         avatar: {
             type: String
         },
+        // activityStatus: {
+        //     type: String,
+        //     enum: ['Offline, Online'],
+        //     default: 'Offline'
+        // },
         contacts: [{
             type: String // id
         }]
@@ -43,7 +48,7 @@ UserSchema.statics.login = async function(username, password) {
             return user
         throw Error('Incorrect password')
     }
-    throw Error('Incorrect email')
+    throw Error('Incorrect username')
 }
 
 module.exports = mongoose.model("User", UserSchema)

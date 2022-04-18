@@ -64,7 +64,7 @@ const ActivityContainer = styled.div`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border: 1px solid lightgray;
+    // border: 1px solid lightgray;
     margin-top: 10px;
 ` 
 
@@ -105,21 +105,24 @@ const TabList = styled.div`
     // justify-content: center;
     margin-top: 10px;
     padding: 5px;
-    border: 1px solid lightgray;
+    // border: 1px solid lightgray;
 `
 
 const TabItem = styled.div`
-    width: 300px;
-    height: 44px;
+    // width: 300px;
+    width: 340px;
+    // height: 44px;
+    height: 58px;
     cursor: pointer;
     margin-bottom: 3px;
     border-radius: 7px;
+    // font-weight: ${props => props.notify === true && 'bold'};
     &:hover {
         background-color: #EBF5F9;
     }
-    // &:focus {
-    //     background-color: #B9E7F9;
-    // }
+    &:focus {
+        background-color: #B9E7F9;
+    }
     &:nth-child(${localStorage.getItem('chatId')}) {
         background-color: #B9E7F9;
     }
@@ -133,7 +136,7 @@ const NotFound = styled.div`
     margin-left: 16px;
 `
 
-const Title = styled.div`
+const ChatItem = styled.div`
     display: flex;
     // flex-direction: column;
     justify-content: center;
@@ -142,7 +145,31 @@ const Title = styled.div`
 `
 
 const ChatAvatar = styled.div`
-    
+    position: relative;
+`
+
+const ChatTitle = styled.div`
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-item: center;
+`
+
+const StatusSign = styled.div`
+    position: absolute;
+    right: 3px;
+    bottom: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+`
+
+const OnlineSign = styled(StatusSign)`
+    background-color: #19E95F;
+`
+
+const OfflineSign = styled(StatusSign)`
+    background-color: #D5D8DC;
 `
 
 const ChatName = styled.div`
@@ -150,11 +177,14 @@ const ChatName = styled.div`
     font-weight: 500;
 `
 
-const Description = styled.div`
+const Preview = styled.div`
     font-weight: 500;
+    // font-weight: ${props => props.notify === true && 'bold'};
+    color: ${props => props.notify === true && 'yellow'};
 `
 
 export {Container, TopContainer, SearchContainer, SearchLabel, 
     SearchInput, SettingIcon, ActivityContainer, ActivityItem, 
-    TabList, TabItem, NotFound, Title, ChatAvatar, ChatName, Description}
+    TabList, TabItem, NotFound, ChatItem, ChatAvatar, ChatTitle, 
+    OnlineSign, OfflineSign, ChatName, Preview}
     

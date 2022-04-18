@@ -1,29 +1,34 @@
-const http = require('http')
-const express = require('express')
-const { Server } = require('socket.io')
-const mongoose = require('mongoose')
-const dotenv = require('dotenv')
-const cookieParser = require('cookie-parser')
 
-const authRoute = require('./routes/auth')
-const userRoute = require('./routes/user')
-const peerRoute = require('./routes/peer')
-// const {OnelineUsers} = require('./controllers/authController')
-// const OnlineUsers = []
-const OnlineUsers = require('./models/OnlineUsers')
+const express = require('express'),
+    { Server } = require('socket.io'),
+    mongoose = require('mongoose'),
+    dotenv = require('dotenv'),
+    cookieParser = require('cookie-parser'),
 
-// csrf protection
-const csrf = require('csurf')
-// session management using cookies
-const session = require('express-session')
+    authRoute = require('./routes/auth'),
+    userRoute = require('./routes/user'),
+    peerRoute = require('./routes/peer'),
+    notifyRoute = require('./routes/notify'),
 
-const csrfProtection = csrf({ cookie: true })
+    OnlineUsers = require('./models/OnlineUsers'),
+    OfflineReceivers = require('./models/OfflineReceivers'),
+    User = require('./models/User'),
+    http = require('http'),
 
+    // csrf protection
+    csrf = require('csurf'),
+    // session management using cookies
+    session = require('express-session'),
+
+    csrfProtection = csrf({ cookie: true }),
+    cors = require('cors')
+
+dotenv.config()
 
 const app = express()
-const cors = require('cors');
 app.use(cors({
-    origin: 'http://localhost:8080',
+    // origin: `http://${process.env.HOSTNAME}:${process.env.PORT}`,
+    origin: `http://${process.env.HOSTNAME}:9090`,
     // methods: ['GET','POST','DELETE','UPDATE','PUT','PATCH']
 }))
 app.use(express.static('public'))
@@ -38,49 +43,45 @@ app.use(session({
         httpOnly: true // httpOnly is true by default
     }
 }))
-dotenv.config()
+
+async function connectDatabase() {
+    await mongoose.connect(process.env.MONGO_URL)
+        .then(result => 
+            console.log('Connect database successfully')
+        )
+        .catch(err => console.log(err))
+}
+
+connectDatabase()
 
 const httpServer = http.createServer(app)
-const io = new Server(httpServer, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
-    },
-    pingTimeout: 60000
-})
-// const io = new Server(httpServer)
 
-mongoose
-    .connect(process.env.MONGO_URL)
-    .then(result => {
-        console.log('Connect database successfully')
-        httpServer.listen(process.env.PORT, () => console.log('Server is running'))
-    })
-    .catch(err => console.log(err))
+httpServer.listen(9090, () => console.log('Server is listening...'))
+const io = new Server(httpServer)
 
 // Development
-// app.get('/', csrfProtection, (req, res) =>
-//     res.render('/frontend/public/index.html', { 
+app.get('/', csrfProtection, (req, res) =>
+    res.render('/frontend/public/index.html', {
+        csrfToken: req.csrfToken()
+    })
+)
+
+// Deployment
+// app.get('/', csrfProtection, (req, res) => 
+//     res.render('index.html', { 
 //         csrfToken: req.csrfToken() 
 //     })
 // )
-
-// Deployment
-app.get('/', csrfProtection, (req, res) => 
-    res.render('index.html', { 
-        csrfToken: req.csrfToken() 
-    })
-)
 app.use('/auth', authRoute)
 app.use('/user', userRoute)
 app.use('/peer', peerRoute)
-
+app.use('/notify', notifyRoute) 
 
 let count = 0
 io.on('connection', socket => {
     // server tạo biến socket 
     // để quản lý kết nối của mỗi client connect vào
-    
+
     const transport = socket.conn.transport.name; // in most cases, "polling"
 
     console.log('Transport name: ', transport)
@@ -91,8 +92,48 @@ io.on('connection', socket => {
     })
 
     //
-    socket.on('disconnect', () => {
-        OnlineUsers.deleteOne({
+    socket.on('disconnect', async () => {
+        const date = new Date()
+        const timeObj = {
+            year: date.getFullYear(),
+            month: date.getMonth() + 1,
+            date: date.getDate(),
+            hour: date.getHours(),
+            minute: date.getMinutes(),
+            second: date.getSeconds()
+        }
+        const user = await User.findOne({ username: socket.username })
+        if (!user)
+            return
+        await user._doc.contacts.forEach(async userId => {
+            const contactUser = await User.findById(userId)
+
+            if (!contactUser)
+                throw Error('Error happen when find contact user')
+
+            const {username} = contactUser._doc
+            
+            const onlineUser = await OnlineUsers.findOne({ username })
+        
+            if (onlineUser) { //
+                io.to(onlineUser._doc.socketId).emit('Notify-offline', {
+                    fromUsername: socket.username,
+                    message: timeObj.year
+                })
+                return
+            }
+            // 
+            await OfflineReceivers.create({
+                username,
+                command: 'Notify-offline',
+                data: {
+                    fromUsername: socket.username,
+                    message: timeObj.year
+                }
+            })
+        })
+
+        await OnlineUsers.deleteOne({
             username: socket.username
         })
         .then(deleted => {
@@ -100,84 +141,128 @@ io.on('connection', socket => {
             console.log('count: ', --count)
             socket.username = null
         })
-        // const i = OnlineUsers.indexOf(socket.Username)
-        // OnlineUsers.splice(i, 1)
-        
     })
     //
     console.log('Connected User: ', socket.id)
     console.log('count: ', ++count)
-    //
-    socket.on('Client-send-data', data => {
-        console.log('data: ', data)
 
-        // Server send all data
-        // io.sockets.emit('Server-send-all', data + ' from client ' + socket.id)
+    // })
 
-        // Server send to specified socket id
-        // io.to('socket-id').emit
-        // io.to(socket.id).emit('Server-send-back', data)
+    socket.on('Notify-online', async ({fromUsername}) => {
+        const existed_user = await OnlineUsers.findOne({ username: fromUsername })
+        if (existed_user) { 
+            socket.emit('Fail-connect-Username-in-use')
+            return
+        }
+                
+        socket.username = fromUsername
+        await OnlineUsers.create({
+            username: fromUsername,
+            socketId: socket.id
+        })
 
-        // Server send back to this socket
-        // socket.emit('Server-send-back', data)
+        // 
+        const date = new Date()
+        const timeObj = {
+            year: date.getFullYear(),
+            month: date.getMonth() + 1,
+            date: date.getDate(),
+            hour: date.getHours(),
+            minute: date.getMinutes(),
+            second: date.getSeconds()
+        }
+        const user = await User.findOne({ username: fromUsername })
+        await user._doc.contacts.forEach(async userId => {
+            const contactUser = await User.findById(userId)
 
-        // Server send broadcast
-        socket.broadcast.emit('Server-send-broadcast', 
-            data + ' from client ' + socket.id)
+            if (!contactUser)
+                throw Error('Error happen when find contact user')
+
+            const {username} = contactUser._doc
+            
+            const onlineUser = await OnlineUsers.findOne({ username })
+            
+            if (onlineUser) { // 
+                io.to(onlineUser._doc.socketId).emit('Notify-online', {
+                    fromUsername: socket.username,
+                    message: timeObj.year
+                })
+                return
+            }
+            // 
+            await OfflineReceivers.create({
+                username,
+                command: 'Notify-online',
+                data: {
+                    fromUsername: socket.username,
+                    message: timeObj.year
+                }
+            })
+        })
+        
+        //
+        const receiverList = await OfflineReceivers.find({ username: fromUsername })
+        if (receiverList) {
+            receiverList.forEach(receiver => {
+                socket.emit(receiver._doc.command, receiver._doc.data)
+            })
+            await OfflineReceivers.deleteMany({ username: fromUsername })
+        }
     })
 
-    socket.once('Client-send-username', data => {
-        OnlineUsers.findOne({ username: data })
-        .then(user => {
-            if (user)
-                socket.emit('Fail-connect-Username-in-use')
-            else {
-                socket.username = data
-                OnlineUsers.create({
-                    username: data,
-                    socketId: socket.id
-                })
+    async function sendData(socket, toUsername, message, command) {
+        const user = await OnlineUsers.findOne({ username: toUsername })
+        
+        if (user) { // online
+            io.to(user._doc.socketId).emit(command, {
+                fromUsername: socket.username,
+                message
+            })
+            return
+        }
+        // offline
+        await OfflineReceivers.create({
+            username: toUsername,   
+            command,
+            data: {
+                fromUsername: socket.username,
+                message
             }
         })
-        .catch(err => console.log(err))
-    })
-    
-    socket.on('Invite-connect', data => {
-        console.log('Invite-connect/socket.username: ', socket.username)
-        // io.to(data).emit('Invite-connect', socket.Username)
-        OnlineUsers.findOne({ username: data })
-        .then(user => {
-            if (user)
-                io.to(user._doc.socketId).emit('Invite-connect', socket.username)
-        })
-        .catch(err => console.log(err))
-    })
-    socket.on('Decline-connect', data => {
-        OnlineUsers.findOne({ username: data })
-        .then(user => {
-            if (user)
-                io.to(user._doc.socketId).emit('Decline-connect', socket.username)
-        })
-        .catch(err => console.log(err))
-    })
-    socket.on('Accept-connect', data => {
-        OnlineUsers.findOne({ username: data})
-        .then(user => {
-            if (user)
-                io.to(user._doc.socketId).emit('Accept-connect', socket.username)
-        })
-        .catch(err => console.log(err))
-    })
-    socket.on('Peer-message', ({toUsername, message}) => {
-        OnlineUsers.findOne({ username: toUsername })
-        .then(user => {
-            if (user)
-                io.to(user._doc.socketId).emit('Peer-message', {
-                    fromUsername: socket.username,
-                    message
-                })
-        })
-        .catch(err => console.log(err))
-    })  
-})
+    }
 
+    socket.on('Invite-connect', ({toUsername, message}) => {
+        sendData(socket, toUsername, message, 'Invite-connect')
+    })
+
+    socket.on('Invite-contact', ({toUsername, message}) => {
+        sendData(socket, toUsername, message, 'Invite-contact')
+    })
+
+    socket.on('Accept-contact', ({toUsername, message}) => {
+        sendData(socket, toUsername, message, 'Accept-contact')
+    })
+
+    socket.on('Peer-message', async ({ toUsername, message, side }) => {
+        const user = await OnlineUsers.findOne({ username: toUsername })
+       
+        if (user) { // online
+            io.to(user._doc.socketId).emit('Peer-message', {
+                fromUsername: socket.username,
+                message,
+                side
+            })
+            return
+        }
+        // offline
+        await OfflineReceivers.create({
+            username: toUsername,
+            command: 'Peer-message',
+            data: {
+                fromUsername: socket.username,
+                message,
+                side
+            }
+        })
+    })
+})

@@ -1,12 +1,14 @@
 import axios from 'axios'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {Form } from './StyledComponent'
+import {Container, Title, Form, Input, 
+    Submit} from './StyledComponent'
 
 function Signup() {
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [usernameExisted, setUsernameExisted] = useState(false)
+    const [invalidPassword, setInvalidPassword] = useState('')
     const navigate = useNavigate()
     const handleSubmit = event => {
         event.preventDefault()
@@ -40,11 +42,11 @@ function Signup() {
         .catch(err => console.log(err))
     } 
     return (
-        <div>
-            <h1>Signup</h1>
+        <Container>
+            <Title>Signup</Title>
             <Form>
-                <input 
-                    placeholder='Username...'
+                Email / Username
+                <Input 
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                 />
@@ -56,15 +58,27 @@ function Signup() {
                         </span>
                     }
                 </div>
-                <input 
-                    placeholder='Password...'
+                Password
+                <Input 
                     type='password'
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                 />
-                <button onClick={handleSubmit}>Submit</button>
+                <div>
+                    {
+                        invalidPassword &&
+                        <span style={{color: 'red'}}>
+                            Invalid password
+                        </span>
+                    }
+                </div>
+                <Submit 
+                    onClick={handleSubmit}
+                >
+                    Submit
+                </Submit>
             </Form>
-        </div>
+        </Container>
     )
 }
 

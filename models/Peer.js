@@ -9,27 +9,25 @@ const PeerSchema = new mongoose.Schema(
         },
         userId2: {
             type: String,
-            required: true,
+            //required: false
         },
         content: [
             {
                 side: {
                     type: String,
-                    required: true,
                 },
                 paragraph: {
                     type: String 
-                } 
-            },
-            {timestamps: true}
+                },
+                // {timestamps: true},
+                _id: false
+            }
         ]
     },  
     // {timestamps: true}
 )
 
 PeerSchema.pre('save', function(next) {
-    // const salt = await bcrypt.genSalt()
-    // this.password = await bcrypt.hash(this.password, salt)
     next()
 })
 
@@ -37,25 +35,27 @@ PeerSchema.post('save', function(doc, next) {
     next()
 })
 
-PeerSchema.statics.findByIdAndPushMessage = 
-        async (peerChatId, userId, paragraph) => {
+PeerSchema.statics.findByIdAndPushMessage = async function ({peerChatId, userId, paragraph}) {   
     try {
-        const peer = await this.findById(peerChatId)
-        if (data) {
-            const updatedPeer = data._doc
-            let side
-            (updatedPeer.userId1 === userId) && (side = '1')
-            (updatedPeer.userId2 === userId) && (side = '2')
-            updatedPeer.content.push({
+        const updatedPeer = await this.findById(peerChatId)
+        let side = '1'
+        if (updatedPeer) {
+            if (updatedPeer._doc.userId2 === userId) 
+                side = '2'
+            updatedPeer._doc.content.push({
                 side,
                 paragraph
             })
         }
-        const savedPeer = await peer.save()
-        return savedPeer
+        // const savedPeer = await updatedPeer.save()
+        // return savedPeer
+        await updatedPeer.save()
+        return {side}
+
     } catch(err) {
         return err
     }
+    
 }
 
 module.exports = mongoose.model("Peer", PeerSchema)

@@ -29,7 +29,6 @@ const getUserById = async (req, res) => {
         const {password, ...others} = user._doc
         res.status(200).json(others)
     } catch(err) {
-        console.log(err)
         res.json(err)
     }
 }
@@ -46,49 +45,53 @@ const getUserByUsername = (req, res) => {
     .catch(err => res.json(err))
 }
 
-const startNewChat = (req, res) => {
-    const {userId1, userId2} = req.params
-    Chat.createChat({ userId1, userId2 })
-    .then(success => res.status(201).json({ message: 'Success' }))
-    .catch(err => {
-        const errors = handleErrors(err)
-        res.status(500).json(errors)
-    })
-}
-
-const getAllUser = async (req, res) => {
-    const query = req.query.new
+const addContact = async (req, res) => {
+    const {userId, contactUsername} = req.body
     try {
-        const users = query 
-        ? await User.find().sort({_id: -1}).limit(5) 
-        : await User.find()
-        for (let index in users) {
-            let {password, ...others} = users[index]._doc
-            users[index] = others
-        }
-        res.status(200).json(users)
-    } catch(err) {
-        res.status(500).json(err)
-    }
-}
-
-const getUserStats = async (req, res) => {
-    const date = new Date()
-    const lastYear = new Date(date.setFullYear(date.getFullYear() - 1))
-
-    try {
-        const data = await User.aggregate([
-            {$match: {createdAt: {$gte: lastYear}}},
-            {$project: {month: {$month: "$createdAt"}}},
-            {$group: {_id: '$month', total: {$sum: 1}}}
-        ])
-        res.status(200).json(data)
+        const user = await User.findById(userId)
+        const contact_user = await User.findOne({ 
+            username: contactUsername 
+        })
+        if (user && contact_user) 
+            user._doc.contacts.push(contact_user._doc._id)
+        await user.save()
+        res.status(200).json({message: 'Success'})
     } catch (err) {
         res.status(500).json(err)
     }
 }
 
+const getContactList = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId)
+    
+        if (!user)
+            throw Error('Error happen when find user')
+        
+        const arrayOfPromises = user._doc.contacts.map(async userId => {
+            const contactUser = await User.findById(userId)
+
+            if (!contactUser)
+                throw Error('Error happen when find contact user')
+
+            const {username, avatar} = contactUser._doc
+            return {
+                username, 
+                avatar
+            }
+        })
+        const contactList = await Promise.all(arrayOfPromises)
+        
+        res.status(200).json({ contactList })
+
+    } catch(err) { 
+        res.status(500).json(err)
+    }
+}
+
+
+
 module.exports = {
     updateUserById, deleteUserById, getUserById, getUserByUsername, 
-    startNewChat, getAllUser, getUserStats
+    addContact, getContactList
 }

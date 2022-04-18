@@ -1,44 +1,139 @@
-import {useEffect, useState} from 'react'
-import { Search, MoreVert, Chat, Group, VoiceChat, Contacts } from '@material-ui/icons'
-// import ChatIcon from '@material-ui/icons/Chat'
+import {useEffect, useState, useContext, memo} from 'react'
+import { Search, MoreVert, Chat, Group, 
+    VoiceChat, Contacts, AccountCircle } from '@material-ui/icons'
+// import ChatIcon from '@material-ui/icons/Chat' 
 import axios from 'axios'
-import { useStore, actions } from '../../store'
+import { SocketContext } 
+from '../../Context/SocketContext'
+import { UserBoardToChat_Context } 
+from '../../Context/UserBoardToChat_Context'
+import { NotificationToUserBoard_Context } 
+from '../../Context/NotificationToUserBoard_Context'
 import {Container, TopContainer, SearchContainer, SearchLabel, 
     SearchInput, SettingIcon, ActivityContainer, ActivityItem, 
-    TabList, TabItem, NotFound,Title, ChatAvatar, ChatName, Description} from './StyledComponent'
+    TabList, TabItem, NotFound, ChatItem, ChatAvatar, ChatTitle, 
+    OnlineSign, OfflineSign, ChatName, Preview} from './StyledComponent'
 
 function UserBoard() {
+    console.log('UserBoard Component')
     const [tab, setTab] = useState('Peer') // Chat | Group | Meeting | Contact
     const [peerList, setPeerList] = useState([])
     const [groupList, setGroupList] = useState([])
     const [meetingList, setMeetingList] = useState([])
     const [contactList, setContactList] = useState([])
     const [result, setResult] = useState('404')
-    const [chatName, setChatName] = useState('')
-    const [chatAvatar, setChatAvatar] = useState('')
-    const [userId2, setUserId2] = useState('')
-    const [state, dispatch] = useStore()
-    // const {chatName, chatAvatar, peerChatId, groupChatId} = state
-
+    const [notifyPeerList, setNotifyPeerList] = useState([])
+    const [searchChatInfo, setSearchChatInfo] = useState({
+        userId2: '',
+        username: '',
+        avatar: ''
+    })
+    const socket = useContext(SocketContext)
+    const userBoardToChat_Context = useContext(UserBoardToChat_Context)
+    const notificationContext = useContext(NotificationToUserBoard_Context)
+    const { setPeerChatInfo, setUserId2, setChatName, setGroupChatId, 
+        notifyPeerChatId: notifyChatId } = userBoardToChat_Context
+    const { notifyPeerChatId: notificationId, 
+        notifyContactList } = notificationContext
     useEffect(() => {
         switch(tab) {
-            case 'Peer':
-                axios.get('/peer/get-peer-list/' + localStorage.getItem('userId'))
+            case 'Peer': {
+                axios.get('/peer/get-peer-info-list/' + localStorage.getItem('userId'))
                 .then(res => {
                     if (res.status === 200)
-                        console.log('res data: ', res.data)
-                        setPeerList(res.data.peerChatIdList)
+                        setPeerList(res.data.peerChatInfoList)
                 })
-                .catch(err => console.log(err.response.data))
+                .catch(err => console.log(err))
                 return 
+            }
             case 'Group':
                 return
             case 'Meeting':
                 return
             case 'Contact':
-                return
+                axios.get('/user/get-contact-list/' + localStorage.getItem('userId'))
+                .then(res => {
+                    if (res.status === 200)
+                        setContactList(res.data.contactList)
+                })
+                .catch(err => console.log(err))
+                return 
         }
     }, [tab])
+    
+    if (socket) {
+        socket.on('Notify-online', ({fromUsername, message}) => {
+            setPeerList(prev => {
+                for (const peer of prev) {
+                    if (peer.username === fromUsername) {
+                        peer.activityStatus = 'Online'
+                        return prev
+                    }
+                }
+            })
+        })
+        socket.on('Notify-offline', ({fromUsername, message}) => {
+            setPeerList(prev => {
+                for (const peer of prev) {
+                    if (peer.username === fromUsername) {
+                        peer.activityStatus = 'Offline'
+                        return prev
+                    }
+                }
+            })
+        })
+    }
+
+    useEffect(() => {
+        axios.get('/notify/get-notify-peer-list/' + 
+            localStorage.getItem('username')
+        )
+        .then(res => {
+            setNotifyPeerList(res.data.notifyPeerList)
+        })
+    }, [])
+
+    useEffect(() => {
+        setNotifyPeerList([...notifyPeerList, notifyChatId])
+    }, [notifyChatId])
+
+    useEffect(() => {
+        setNotifyPeerList([...notifyPeerList, notificationId])
+    }, [notificationId])
+    // Notify Peer List
+    // Everytime user send accept connect to invitor, a new peer
+    // chat square must be automatically added to peer chat list 
+
+    useEffect(() => {
+        axios.get('/peer/get-peer-info-list/' + localStorage.getItem('userId'))
+        .then(res => {
+            if (res.status === 200) {
+                setPeerList(prev => {
+                    const newArr = [...res.data.peerChatInfoList]
+                    for (const peer of newArr) {
+                        if (notifyPeerList.includes(peer.peerChatId)) {
+                            peer.notify = true
+                        } else {
+                            peer.notify = false
+                        }
+                    }
+                    return newArr
+                })
+            }
+        })
+        .catch(err => console.log(err))
+    }, [notifyPeerList])
+
+    // Notify Contact List
+    useEffect(() => {
+        axios.get('/user/get-contact-list/' + localStorage.getItem('userId'))
+        .then(res => {
+            if (res.status === 200) 
+                setContactList(res.data.contactList)
+        })
+        .catch(err => console.log(err))
+    }, [notifyContactList])
+
     function handleSearchInput(e) {
         e.preventDefault()
         setTab('Search')
@@ -48,32 +143,107 @@ function UserBoard() {
                 setResult('404')
             else {
                 setResult('Found')
-                setChatName(e.target.value)
-                setChatAvatar(res.data.avatar)
-                setUserId2(res.data.id)
+                setSearchChatInfo({
+                    userId2: res.data.id,
+                    username: e.target.value,
+                    avatar: res.data.avatar
+                })
             }
         })
-        .catch(err => console.log(err.response.data))
+        .catch(err => console.log(err))
     }
     
     function renderSearchChat(e) {
         e.preventDefault()
-        dispatch(actions.setUserId2(userId2))
-        dispatch(actions.setChatName(chatName))
-        dispatch(actions.setChatAvatar(chatAvatar))
-        dispatch(actions.setSearchChat(true))
+        axios.post('/peer/check-chat-exist', {
+            userId1: localStorage.getItem('userId'),
+            userId2: searchChatInfo.userId2
+        })
+        .then(res => {
+            if (res.data.message === 'Chat not found') {
+                setUserId2(searchChatInfo.userId2)
+                // setPeerChatId('')
+                setPeerChatInfo(prev => ({
+                        ...prev,
+                        peerChatId: ''
+                    })
+                ) 
+            }
+            else {
+                setPeerChatInfo(prev => ({
+                        ...prev,
+                        peerChatId: res.data.peerChatId
+                    }) 
+                )
+            } 
+            
+            const found = contactList.find(element => 
+                element.username === searchChatInfo.username
+            )
+            if (found)
+                setPeerChatInfo(prev => ({
+                        ...prev,
+                        chatName: searchChatInfo.username,
+                        chatAvatar: searchChatInfo.avatar,
+                        contactStatus: 'Friend'
+                    })
+                )
+            else 
+                setPeerChatInfo(prev => ({
+                        ...prev,
+                        chatName: searchChatInfo.username,
+                        chatAvatar: searchChatInfo.avatar,
+                        contactStatus: 'Stranger'
+                    })
+                )
+        })
+        .catch(err => console.log(err))
     }
+
     function renderPeerChat(e, peer) {
         e.preventDefault()
-        dispatch(actions.setPeerChatId(peer.id))
-        dispatch(actions.setChatName(peer.name))
-        dispatch(actions.setChatAvatar(peer.avatar))
+        const found = contactList.find(element => 
+            element.username === peer.username
+        )
+        if (found)
+            setPeerChatInfo({
+                peerChatId: peer.peerChatId,
+                chatName: peer.username,
+                chatAvatar: peer.avatar,
+                contactStatus: 'Friend'
+            })
+        else 
+            setPeerChatInfo({
+                peerChatId: peer.peerChatId,
+                chatName: peer.username,
+                chatAvatar: peer.avatar,
+                contactStatus: 'Stranger'
+            })
+        
+        // Remove Notify item
+        setNotifyPeerList(prev => 
+            prev.filter(notify => 
+                notify.peerChatId !== peer.peerChatId
+            )
+        )
+        axios.patch('/notify/remove-notify', {
+            username: localStorage.getItem('username'),
+            peerChatId: peer.peerChatId,
+            type: 'Peer-message'
+        })
     }
+
     function renderGroupChat(e, group) {
         e.preventDefault()
-        dispatch(actions.setGroupChatId(group.id))
-        dispatch(actions.setChatName(group.name))
+        setGroupChatId(group.id)
+        setChatName(group.username)
+        setPeerChatInfo({
+            // peerChatId: group.groupChatId,
+            chatName: group.username,
+            // chatAvatar: group.avatar
+        })
     }
+
     return (
         <Container>
             <TopContainer>
@@ -122,20 +292,44 @@ function UserBoard() {
                 </ActivityItem>
             </ActivityContainer>
             <TabList>
-                {tab === 'Peer' && peerList.map((item, index) => (
+                {tab === 'Peer' && peerList.map((peer, index) => (
                     <TabItem 
                         key={index}
-                        onClick={() => renderPeerChat(item)}
+                        onClick={e => renderPeerChat(e, peer)}
                     >
-                        {item}
+                        <ChatItem>
+                            <ChatAvatar>
+                                {peer.avatar ||   
+                                    <AccountCircle 
+                                        style={{fontSize: '2.5em'}}
+                                    />
+                                }
+                                {peer.activityStatus === 'Online'
+                                    && <OnlineSign />
+                                }
+                                {peer.activityStatus === 'Offline'
+                                    && <OfflineSign />
+                                }
+                            </ChatAvatar>
+                            <ChatTitle>
+                                <ChatName>
+                                    {peer.username}
+                                </ChatName>
+                                <Preview 
+                                    notify={peer.notify}
+                                >
+                                    {peer.preview.paragraph}
+                                </Preview>
+                            </ChatTitle>
+                        </ChatItem>
                     </TabItem>
                 ))}
-                {tab === 'Group' && groupList.map((item, index) => (
+                {/* {tab === 'Group' && groupList.map((group, index) => (
                     <TabItem 
                         key={index}
-                        onClick={renderGroupChat}
+                        onClick={e => renderGroupChat(e, group)}
                     >
-                        {item}
+                        {group}
                     </TabItem>
                 ))}
                 {tab === 'Meeting' && meetingList.map((item, index) => (
@@ -144,12 +338,12 @@ function UserBoard() {
                     >
                         {item}
                     </TabItem>
-                ))}
-                {tab === 'Contact' && contactList.map((item, index) => (
+                ))} */}
+                {tab === 'Contact' && contactList.map((contact, index) => (
                     <TabItem 
                         key={index}
                     >
-                        {item}
+                        {contact.username}
                     </TabItem>
                 ))}
                 {tab === 'Search' &&
@@ -165,17 +359,23 @@ function UserBoard() {
                                     </NotFound>
                                 ) 
                                 : (
-                                    <Title>
+                                    <ChatItem>
                                         <ChatAvatar>
-                                            {chatAvatar || 'Avatar'}
+                                            {searchChatInfo.avatar || 
+                                                <AccountCircle 
+                                                    style={{fontSize: '2.5em'}}
+                                                />
+                                            }
                                         </ChatAvatar>
-                                        <ChatName>
-                                            {chatName}
-                                        </ChatName>
-                                        <Description>
-                                            {'Abc...'}
-                                        </Description>
-                                    </Title>
+                                        <ChatTitle>
+                                            <ChatName>
+                                                {searchChatInfo.username}
+                                            </ChatName>
+                                            <Preview>
+                                                {'Some personal information...'}
+                                            </Preview>
+                                        </ChatTitle>
+                                    </ChatItem>
                                 )
                             }
                         </TabItem>
@@ -186,4 +386,4 @@ function UserBoard() {
     )
 }
 
-export default UserBoard
+export default memo(UserBoard)

@@ -1,7 +1,9 @@
 import axios from 'axios'
-import {useState} from 'react'
-import { useNavigate } from 'react-router-dom'
-import {Form} from './StyledComponent'
+import {useState, useContext} from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {AuthenContext} from '../../Context/AuthenContext'
+import {Container, Title, Form, Input, 
+    Submit} from './StyledComponent'
 
 function Login() {
     const [username, setUsername] = useState('')
@@ -9,6 +11,9 @@ function Login() {
     const [invalidUsername, setInvalidUsername] = useState('')
     const [invalidPassword, setInvalidPassword] = useState('')
     const navigate = useNavigate()
+    const authenContext = useContext(AuthenContext)
+    const {setAuthen} = authenContext
+
     function handleSubmit(event) {
         event.preventDefault()
         axios.post('/auth/login', {username, password})
@@ -21,18 +26,19 @@ function Login() {
                 if (user) { 
                     localStorage.setItem('userId', user.id)
                     localStorage.setItem('username', user.username)
+                    setAuthen(true)
                     navigate('/chat')
                 }        
             }
         })
-        .catch(err => console.log(err.response.data))
+        .catch(err => console.log(err.message))
     }
     return (
-        <div>
-            <h1>Login</h1>
+        <Container>
+            <Title>Login</Title>
             <Form>
-                <input 
-                    placeholder='Username...'
+                Email / Username
+                <Input 
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                 />
@@ -43,8 +49,8 @@ function Login() {
                             Invalid username
                         </span>}
                 </div>
-                <input 
-                    placeholder='Password...'
+                Password
+                <Input 
                     type='password'
                     value={password}
                     onChange={e => setPassword(e.target.value)}
@@ -54,11 +60,22 @@ function Login() {
                         invalidPassword &&
                         <span style={{color: 'red'}}>
                             Invalid password
-                        </span>}
+                        </span>
+                    }
                 </div>
-                <button onClick={handleSubmit}>Submit</button>
+                <div>
+                    Don't have an account?
+                    <Link to='/signup'>
+                        Sign up
+                    </Link>
+                </div>
+                <Submit 
+                    onClick={handleSubmit}
+                >
+                    Sign in
+                </Submit>
             </Form>
-        </div>
+        </Container>
     )
 }
 

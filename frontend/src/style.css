@@ -18,10 +18,7 @@
     cursor: pointer;
 }
 
-.container {
-    margin: 20px;
-}
-
 :root {
     --mainBlue: #2BA1D8;
+    --textBlack: #2C3149;
 }

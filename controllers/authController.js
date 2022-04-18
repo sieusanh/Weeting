@@ -1,4 +1,5 @@
 const User = require('../models/User')
+const Notify = require('../models/Notify')
 const jwt = require('jsonwebtoken')
 
 // const OnlineUsers = []
@@ -45,7 +46,15 @@ function generateAccessToken(user) {
 function Signup(req, res) {
     const { username, password } = req.body 
     User.create({ username, password })
-    .then(u => res.status(201).json({ user: u._id }))
+    .then(async u => {
+        if (u) {
+            await Notify.create({ 
+                username,
+                notifyList: []
+            })
+            res.status(201).json({ user: u._id })
+        }
+    })
     .catch(err => {
         const errors = handleErrors(err)
         res.status(400).json(errors)
@@ -54,19 +63,18 @@ function Signup(req, res) {
 
 function Login(req, res) {
     const {username, password} = req.body
-    const userObj = {}
 
     User.login(username, password)
     .then(user => {
-        userObj.id = user._doc._id
-        userObj.username = user._doc.username
-        // userObj.role = user._doc.role
-        const accessToken = generateAccessToken(userObj)
+        const accessToken = generateAccessToken({
+            id: user._doc._id,
+            username: user._doc.username
+        })
         res.cookie('accessToken', accessToken, {httpOnly: true, secure: true})
-        res.status(200).json(userObj)
-        
-        //update online user
-        // OnlineUsers.push(userObj.username)
+        res.status(200).json({
+            id: user._doc._id,
+            username: user._doc.username
+        })
     })
     .catch(err => {
         const errors = handleErrors(err)
@@ -76,6 +84,7 @@ function Login(req, res) {
 
 function Logout(req, res) {
     res.clearCookie('accessToken')
+    res.clearCookie('connect.sid')
     res.status(204).json({message: 'See you again!'})
 }
 
