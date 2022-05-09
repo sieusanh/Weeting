@@ -9,6 +9,7 @@ const express = require('express'),
     userRoute = require('./routes/user'),
     peerRoute = require('./routes/peer'),
     notifyRoute = require('./routes/notify'),
+    onlineRoute = require('./routes/online'),
 
     OnlineUsers = require('./models/OnlineUsers'),
     OfflineReceivers = require('./models/OfflineReceivers'),
@@ -60,22 +61,23 @@ httpServer.listen(9090, () => console.log('Server is listening...'))
 const io = new Server(httpServer)
 
 // Development
-app.get('/', csrfProtection, (req, res) =>
-    res.render('/frontend/public/index.html', {
-        csrfToken: req.csrfToken()
-    })
-)
-
-// Deployment
-// app.get('/', csrfProtection, (req, res) => 
-//     res.render('index.html', { 
-//         csrfToken: req.csrfToken() 
+// app.get('/', csrfProtection, (req, res) =>
+//     res.render('/frontend/public/index.html', {
+//         csrfToken: req.csrfToken()
 //     })
 // )
+
+// Deployment
+app.get('/', csrfProtection, (req, res) => 
+    res.render('index.html', { 
+        csrfToken: req.csrfToken() 
+    })
+)
 app.use('/auth', authRoute)
 app.use('/user', userRoute)
 app.use('/peer', peerRoute)
 app.use('/notify', notifyRoute) 
+app.use('/online-user', onlineRoute)
 
 let count = 0
 io.on('connection', socket => {
@@ -83,9 +85,6 @@ io.on('connection', socket => {
     // để quản lý kết nối của mỗi client connect vào
 
     const transport = socket.conn.transport.name; // in most cases, "polling"
-
-    console.log('Transport name: ', transport)
-
     socket.conn.on("upgrade", () => {
         const upgradedTransport = socket.conn.transport.name; // in most cases, "websocket"
         console.log('Upgraded transport name: ', upgradedTransport)
@@ -93,6 +92,7 @@ io.on('connection', socket => {
 
     //
     socket.on('disconnect', async () => {
+        console.log('Bye username: ', socket.username)
         const date = new Date()
         const timeObj = {
             year: date.getFullYear(),
@@ -105,11 +105,41 @@ io.on('connection', socket => {
         const user = await User.findOne({ username: socket.username })
         if (!user)
             return
-        await user._doc.contacts.forEach(async userId => {
+        // user._doc.contacts.forEach(async userId => {
+        //     const contactUser = await User.findById(userId)
+
+        //     if (!contactUser)
+        //         throw Error('Error happen when find contact user')
+
+        //     const {username} = contactUser._doc
+            
+        //     const onlineUser = await OnlineUsers.findOne({ username })
+        
+        //     if (onlineUser) { //
+        //         io.to(onlineUser._doc.socketId).emit('Notify-offline', {
+        //             fromUsername: socket.username,
+        //             message: timeObj.year
+        //         })
+        //         return
+        //     }
+        //     // 
+        //     console.log('Offline username: ', socket.username)
+        //     await OfflineReceivers.create({
+        //         username,
+        //         command: 'Notify-offline',
+        //         data: {
+        //             fromUsername: socket.username,
+        //             message: timeObj.year
+        //         }
+        //     })
+        // })
+
+        for (const userId of user._doc.contacts) {
+
             const contactUser = await User.findById(userId)
 
             if (!contactUser)
-                throw Error('Error happen when find contact user')
+                continue
 
             const {username} = contactUser._doc
             
@@ -120,19 +150,20 @@ io.on('connection', socket => {
                     fromUsername: socket.username,
                     message: timeObj.year
                 })
-                return
             }
-            // 
-            await OfflineReceivers.create({
-                username,
-                command: 'Notify-offline',
-                data: {
-                    fromUsername: socket.username,
-                    message: timeObj.year
-                }
-            })
-        })
-
+            // else {
+            //     console.log('Offline username: ', socket.username)
+            //     await OfflineReceivers.create({
+            //         username,
+            //         command: 'Notify-offline',
+            //         data: {
+            //             fromUsername: socket.username,
+            //             message: timeObj.year
+            //         }
+            //     })
+            // }
+        }
+ 
         await OnlineUsers.deleteOne({
             username: socket.username
         })
@@ -145,8 +176,6 @@ io.on('connection', socket => {
     //
     console.log('Connected User: ', socket.id)
     console.log('count: ', ++count)
-
-    // })
 
     socket.on('Notify-online', async ({fromUsername}) => {
         const existed_user = await OnlineUsers.findOne({ username: fromUsername })
@@ -172,33 +201,71 @@ io.on('connection', socket => {
             second: date.getSeconds()
         }
         const user = await User.findOne({ username: fromUsername })
-        await user._doc.contacts.forEach(async userId => {
+        // await user._doc.contacts.forEach(async userId => {
+        //     const contactUser = await User.findById(userId)
+
+        //     if (!contactUser)
+        //         throw Error('Error happen when find contact user')
+
+        //     const {username} = contactUser._doc
+            
+        //     const onlineUser = await OnlineUsers.findOne({ username })
+            
+        //     if (onlineUser) { // 
+        //         io.to(onlineUser._doc.socketId).emit('Notify-online', {
+        //             fromUsername: socket.username,
+        //             message: timeObj.year
+        //         })
+        //         return
+        //     }
+        //     // 
+        //     await OfflineReceivers.create({
+        //         username,
+        //         command: 'Notify-online',
+        //         data: {
+        //             fromUsername: socket.username,
+        //             message: timeObj.year
+        //         }
+        //     })
+        // })
+
+        if (!user)
+            return
+
+        // Send Notify-online to all contacted user
+        const onlineUsers = []
+        for (const userId of user._doc.contacts) {
             const contactUser = await User.findById(userId)
 
             if (!contactUser)
-                throw Error('Error happen when find contact user')
+                continue
 
             const {username} = contactUser._doc
             
             const onlineUser = await OnlineUsers.findOne({ username })
             
-            if (onlineUser) { // 
+            if (onlineUser) { //
                 io.to(onlineUser._doc.socketId).emit('Notify-online', {
                     fromUsername: socket.username,
                     message: timeObj.year
                 })
-                return
+
+                onlineUsers.push(username)
             }
-            // 
-            await OfflineReceivers.create({
-                username,
-                command: 'Notify-online',
-                data: {
-                    fromUsername: socket.username,
-                    message: timeObj.year
-                }
-            })
-        })
+            // else {
+            //     await OfflineReceivers.create({
+            //         username,
+            //         command: 'Notify-online',
+            //         data: {
+            //             fromUsername: socket.username,
+            //             message: timeObj.year
+            //         }
+            //     })
+            // }
+        }
+
+        // Send online contacted users back to this user
+        socket.emit('Initial-online-users', {onlineUsers})
         
         //
         const receiverList = await OfflineReceivers.find({ username: fromUsername })

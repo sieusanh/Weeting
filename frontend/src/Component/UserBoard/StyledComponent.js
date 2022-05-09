@@ -180,7 +180,7 @@ const ChatName = styled.div`
 const Preview = styled.div`
     font-weight: 500;
     // font-weight: ${props => props.notify === true && 'bold'};
-    color: ${props => props.notify === true && 'yellow'};
+    color: ${props => props.notify ? 'yellow' : 'green'};
 `
 
 export {Container, TopContainer, SearchContainer, SearchLabel, 

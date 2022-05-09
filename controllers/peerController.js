@@ -3,15 +3,19 @@ const User = require('../models/User')
 
 const checkChatExist = (req, res) => {
     const {userId1, userId2} = req.body
+
     Peer.findOne({
         $or: [{userId1, userId2}, {userId1: userId2, userId2: userId1}]
     })
     .then(peer => {
         if (!peer)
-            return res.json({message: 'Chat not found'})
-        return res.status(200).json({ peerChatId: peer._doc._id })    
+            return res.json({ message: '404' })
+        return res.json({ peerChatId: peer._doc._id })    
     })
-    .catch(err => res.json(err))
+    .catch(err => {
+        console.log('Loi: ', err)
+        res.status(500).json(err)
+    })
 }
 
 const createNewPeerChat = (req, res) => {
@@ -60,13 +64,13 @@ const getPeerInfoList = async (req, res) => {
             throw Error('Error happen when find peer list')
         
         const arrayOfPromises = peerList.map(async peer => {
-            const preview = peer.content.at(-1)
+            const preview = peer.content.at(-1) || ''
             let userId2
             if (req.params.userId === peer.userId1) {
                 // Handle create new peer chat case
                 if (peer.userId2.includes('chatName:')) {
                     const username = 
-                    peer.userId2.substring('chatName:'.length)
+                        peer.userId2.substring('chatName:'.length)
                     const user = await User.findOne({ username })
                     const {avatar} = user._doc 
                     return {
@@ -115,6 +119,34 @@ const getPeerInfoList = async (req, res) => {
     }
 }
 
+const getPeerInfo = async (req, res) => {
+    const {peerChatId} = req.params
+    
+    try {
+        const peer = await Peer.findById(peerChatId)
+        if (!peer)
+            throw Error('Error happen when find peer')
+
+        const userId2 = peer.userId2
+        const preview = peer.content.at(-1)
+        const user = await User.findById(userId2)
+        if (!user)
+            throw Error('Error happen when find user by userId2')
+        const {username, avatar} = user._doc 
+
+        res.status(200).json({
+            peerChatId,
+            preview,
+            username, 
+            avatar
+        })
+
+    } catch(err) { 
+        console.log('Loi: ', err)
+        res.status(500).json(err)
+    }
+}
+
 const pushMessage = (req, res) => {
     Peer.findByIdAndPushMessage({...req.body})
     .then(result => {
@@ -125,5 +157,6 @@ const pushMessage = (req, res) => {
     .catch(err => res.status(500).json(result.error))
 }
 
-module.exports = { checkChatExist, createNewPeerChat, addUserId2ToPeerChat, 
-    queryPeerChat, getPeerList, getPeerInfoList, pushMessage }
+module.exports = { checkChatExist, createNewPeerChat, 
+    addUserId2ToPeerChat, queryPeerChat, getPeerList, 
+    getPeerInfoList, getPeerInfo, pushMessage }

@@ -1,13 +1,15 @@
 const router = require('express').Router()
 const {userAuthentication} = require('../middlewares/Authentication')
-const { checkChatExist, createNewPeerChat, 
-    addUserId2ToPeerChat, queryPeerChat, getPeerList, 
-    getPeerInfoList, pushMessage } = require('../controllers/peerController')
+const { checkChatExist, createNewPeerChat, addUserId2ToPeerChat, 
+    queryPeerChat, getPeerList, getPeerInfoList, 
+    getPeerInfo, pushMessage } = require('../controllers/peerController')
 
 // GET
 router.get('/get-peer-list/:userId', userAuthentication, getPeerList)
 
 router.get('/get-peer-info-list/:userId', userAuthentication, getPeerInfoList)
+
+router.get('/get-peer-info/:peerChatId', userAuthentication, getPeerInfo)
 
 // POST
 router.post('/create-new-peer-chat', userAuthentication, createNewPeerChat)

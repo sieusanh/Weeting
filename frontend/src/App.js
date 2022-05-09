@@ -22,7 +22,6 @@ from './Context/NotificationToUserBoard_Context'
 
 const Container = styled.div`
     margin: 20px 76px;
-    padding: 2px;
     border: 1px solid lightgray;
     border-radius: 4px;
 `
@@ -39,7 +38,7 @@ function WithNav() {
 function WithoutNav() {
 	return (
 		<>
-			<Outlet />cd 
+			<Outlet />
 		</>
 	)
 }
@@ -47,7 +46,7 @@ function WithoutNav() {
 function App() {
 	const location = useLocation()
 
-    console.log('Location: ', location.pathname)
+    // console.log('Location: ', location.pathname)
 	if (window.performance) {
 		if (performance.getEntriesByType("navigation")[0].type === 'reload') {
 		}
@@ -63,10 +62,10 @@ function App() {
 								<Routes>
 									<Route path='/login' element={<LoginPage />} />
 									<Route path='/signup' element={<SignupPage />} />
-									<Route path="*" element={<PageNotFound />} />
 									<Route path='/' element={<HomePage />} />
 									<Route path='/chat' element={<ChatPage />} />
 									<Route path='/meeting' element={<MeetingPage/>} />
+									<Route path="*" element={<PageNotFound />} />
 								</Routes>
 								<Footer />
 							</Container>

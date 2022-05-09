@@ -1,10 +1,9 @@
 import styled from 'styled-components'
 import {Link} from 'react-router-dom'
 
-
 const Container = styled.div`
     height: 700px;
-    border: 1px solid;
+    // border: 1px solid;
     color: var(--textBlack);
     font-size: 42px;
     background-color: #F9FAFC;
@@ -15,9 +14,14 @@ const Container = styled.div`
         color: #FFF;
         `
     }
+
 `
 // #FAFAFA
 // #F9FAFC
+
+const Introduction = styled.div`
+    padding-top: 100px;
+`
 
 const GoChatingLink = styled(Link)`
     text-decoration: none;
@@ -33,4 +37,4 @@ const GoMeetingLink = styled(Link)`
     color: var(--textBlack);
 `
 
-export {Container, GoChatingLink, GoMeetingLink}
+export {Container, Introduction, GoChatingLink, GoMeetingLink}

@@ -4,11 +4,15 @@ import { useState, createContext, memo } from 'react'
 const NotificationToChat_Context = createContext()
 
 function NotificationToChat_Provider({ children }) {
-	const [contactStatus, setContactStatus] = useState('Stranger')
+	const [contactInfo, setContactInfo] = useState({
+		contactStatus: 'Stranger',
+		fromUsername: '',
+		peerChatId: ''
+	})
 
 	const value = {
-		contactStatus, 
-		setContactStatus
+		contactInfo, 
+		setContactInfo
 	}
 
 	return (

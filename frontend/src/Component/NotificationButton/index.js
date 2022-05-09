@@ -12,7 +12,7 @@ import {Container, Icon, NotificationBoard,
     Decline} from './StyledComponent'
 
 function NotificationButton({toggle}) {
-    console.log('NotificationButton Component')
+    // console.log('NotificationButton Component')
     const socket = useContext(SocketContext)
     const chatContext = 
         useContext(NotificationToChat_Context)
@@ -21,9 +21,10 @@ function NotificationButton({toggle}) {
     
     const [notifyCount, setNotifyCount] = useState(0)
     const [notifyList, setNotifyList] = useState([])
-    const { setContactStatus } = chatContext
-    const { notifyContactList, setNotifyPeerChatId, 
-        setNotifyContactList } = userBoardContext
+    const [inviteContactPeerChatId, setInviteContactPeerChatId] = useState('')
+    const { setContactInfo } = chatContext
+    const { setNotifyPeerChatId, setNotifyContactList } = userBoardContext
+
     useEffect(() => {
         axios.get('/notify/get-notify-list-length/' + 
             localStorage.getItem('username')
@@ -41,7 +42,6 @@ function NotificationButton({toggle}) {
             setNotifyList(res.data.notifyList)
         })
     }, [notifyCount])
-    console.log('notifyList: ', notifyList)
 
     if (socket) {
         socket.off('Invite-contact').on('Invite-contact', ({fromUsername, message}) => {
@@ -57,8 +57,10 @@ function NotificationButton({toggle}) {
                 type: 'Invite-contact'
             })
             .then(res => {
-                if (res.status === 200)
-                    setNotifyCount(prev => prev + 1)
+                if (res.status === 200) {
+                    setNotifyCount(notifyCount + 1)
+                    setInviteContactPeerChatId(message)
+                }
             })
             .catch(err => console.log(err))
         })
@@ -83,9 +85,28 @@ function NotificationButton({toggle}) {
                     })
                     .then(res2 => {
                         if (res2.status === 200) {
-                            setNotifyCount(prev => prev + 1)
-                            setContactStatus('Friend')
-                            setNotifyContactList(!notifyContactList)
+                            // axios.patch('/peer/add-userId2', {
+                            //     peerChatId: message,
+                            //     userId2: localStorage.getItem('userId')
+                            // })
+                            // .then(res => {
+                            //     if (res.status === 200) {
+                            //         setContactInfo({
+                            //             contactStatus: 'Friend',
+                            //             fromUsername,
+                            //             peerChatId: message
+                            //         })
+                            //         setNotifyContactList(message)
+                            //         // setNotifyPeerChatId(message)
+                            //     }
+                            // })
+                            setContactInfo({
+                                contactStatus: 'Friend',
+                                fromUsername,
+                                peerChatId: message
+                            })
+                            setNotifyContactList(message)
+                            setNotifyCount(notifyCount + 1)
                         }
                     })
                 }
@@ -108,7 +129,7 @@ function NotificationButton({toggle}) {
             })
             .then(res => {
                 if (res.status === 200)
-                    setNotifyCount(prev => prev + 1)
+                    setNotifyCount(notifyCount + 1)
             })
         })
     }
@@ -153,16 +174,20 @@ function NotificationButton({toggle}) {
                 type: 'Invite-connect'
             })
             .then(res3 => {
-                if (res3.status === 200)
-                    setNotifyCount(prev => 
-                        prev === 0 ? 0 : prev - 1)
+                if (res3.status === 200) {
+                    let temp = 
+                        (notifyCount === 0) 
+                        ? 0 
+                        : notifyCount - 1
+
+                    setNotifyCount(temp)
+                }
             })
 
         } catch(err) {
             console.log(err)
         }
     }
-
 
     function declineConnect(e, invitePeerChatId) {
         e.preventDefault()
@@ -180,9 +205,14 @@ function NotificationButton({toggle}) {
             type: 'Invite-connect'
         })
         .then(res => {
-            if (res.status === 200)
-                setNotifyCount(prev => 
-                    prev === 0 ? 0 : prev - 1)
+            if (res.status === 200) {
+                let temp = 
+                    (notifyCount === 0) 
+                    ? 0 
+                    : notifyCount - 1
+
+                setNotifyCount(temp)
+            }
         })
     }
 
@@ -194,12 +224,58 @@ function NotificationButton({toggle}) {
         })
         .then(res => {
             if (res.status === 200) {
+                console.log('200 a')
+                setContactInfo({
+                    contactStatus: 'Friend',
+                    fromUsername,
+                    peerChatId: inviteContactPeerChatId
+                })
+                setNotifyContactList(inviteContactPeerChatId)
+            }
+        })
+
+        await axios.patch('/peer/add-userId2', {
+            peerChatId: inviteContactPeerChatId,
+            userId2: localStorage.getItem('userId')
+        })
+        .then(res => {
+            if (res.status === 200) {
                 socket.emit('Accept-contact', {
                     toUsername: fromUsername,
-                    message: '' 
+                    message: inviteContactPeerChatId
                 })
             }
         })
+
+        // if (!newPeerChatId) {
+        //     await axios.post('/peer/create-new-peer-chat', {
+        //         userId1: localStorage.getItem('userId'),
+        //         chatName: fromUsername 
+        //     })
+        //     .then(res2 => {
+        //         if (res2.status === 200) {
+        //             setContactInfo({
+        //                 contactStatus: 'Friend',
+        //                 fromUsername,
+        //                 peerChatId: res2.data.peerChatId
+        //             })
+        //             setNotifyContactList(res2.data.peerChatId)
+        //             // setNotifyPeerChatId(res2.data.peerChatId)
+        //             // setNewPeerChatId(res2.data.peerChatId)
+        //             socket.emit('Accept-contact', {
+        //                 toUsername: fromUsername,
+        //                 message: res2.data.peerChatId
+        //             })
+        //         }
+        //     })
+        // } else {
+        //     setNotifyContactList(newPeerChatId)
+        //     socket.emit('Accept-contact', {
+        //         toUsername: fromUsername,
+        //         message: newPeerChatId
+        //     })
+        // }
+        
         // setNotifyList(
                 //     notifyList.filter(notify =>
                 //         notify.fromUsername !== fromUsername
@@ -212,9 +288,12 @@ function NotificationButton({toggle}) {
         })
         .then(res => {
             if (res.status === 200) {
-                setNotifyCount(prev => 
-                    prev === 0 ? 0 : prev - 1)
-                setNotifyContactList(!notifyContactList)
+                let temp = 
+                    (notifyCount === 0) 
+                    ? 0 
+                    : notifyCount - 1
+
+                setNotifyCount(temp)
             }
         })
     }
@@ -232,13 +311,18 @@ function NotificationButton({toggle}) {
             type: 'Invite-contact'
         })
         .then(res => {
-            if (res.status === 200)
-                setNotifyCount(prev => 
-                    prev === 0 ? 0 : prev - 1)
+            if (res.status === 200) {
+                let temp = 
+                    (notifyCount === 0) 
+                    ? 0 
+                    : notifyCount - 1
+
+                setNotifyCount(temp)
+            }
         })
     }
 
-    function removeNotify(e, fromUsername) {
+    async function removeNotify(e, fromUsername) {
         e.preventDefault() 
 
         // setNotifyList(
@@ -246,16 +330,22 @@ function NotificationButton({toggle}) {
         //         notify.fromUsername !== fromUsername
         //     )
         // )
-        axios.patch('/notify/remove-notify', {
+        await axios.patch('/notify/remove-notify', {
             username: localStorage.getItem('username'),
             fromUsername,
             type: 'Accept-contact'
         })
         .then(res => {
-            if (res.status === 200)
-                setNotifyCount(prev => 
-                    prev === 0 ? 0 : prev - 1)
+            if (res.status === 200) {
+                let temp = 
+                    (notifyCount === 0) 
+                    ? 0 
+                    : notifyCount - 1
+
+                setNotifyCount(temp)
+            }
         })
+        
     }
 
     function renderNotificationItem(notify, index) {

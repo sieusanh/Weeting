@@ -128,13 +128,7 @@ const removeNotify = async (req, res) => {
             }
         }
 
-        // await userNotify.save(function(err, doc) {
-        //     if (err) 
-        //         return console.error(err)
-        //     console.log('Document $ inserted succussfully! ', doc)
-        // })
-        const myNotify = await userNotify.save()
-        console.log('userNotify after saved: ', myNotify)
+        await userNotify.save()
         res.status(200).json({message: 'Success'})
 
     } catch(err) {

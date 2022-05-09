@@ -5,7 +5,7 @@ const NotificationToUserBoard_Context = createContext()
 
 function NotificationToUserBoard_Provider({ children }) {
 	const [notifyPeerChatId, setNotifyPeerChatId] = useState('')
-	const [notifyContactList, setNotifyContactList] = useState(false)
+	const [notifyContactList, setNotifyContactList] = useState('')
 
 	const value = {
 		notifyPeerChatId, 

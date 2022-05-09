@@ -1,5 +1,5 @@
 import {useContext} from 'react'
-import {Container, GoChatingLink, GoMeetingLink} from './StyledComponent'
+import {Container, Introduction, GoChatingLink, GoMeetingLink} from './StyledComponent'
 import { ThemeContext } from '../../Context/ThemeContext'
 
 
@@ -9,8 +9,11 @@ function HomePage() {
 
     return (
         <Container darkTheme={darkTheme}>
-            <p>Home Page</p>
-            <p>Make meetings closer and simpler</p>
+            <Introduction>
+                Home Page
+                <br />
+                Make meetings closer and simpler
+            </Introduction>
             <GoChatingLink to='/chat'>
                 Go Chating
             </GoChatingLink>

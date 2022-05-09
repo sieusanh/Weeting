@@ -1,6 +1,8 @@
 const User = require('../models/User')
 const Notify = require('../models/Notify')
 const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
+
 
 // const OnlineUsers = []
 
@@ -43,22 +45,30 @@ function generateAccessToken(user) {
     return accessToken
 }
 
-function Signup(req, res) {
+async function Signup(req, res) {
     const { username, password } = req.body 
-    User.create({ username, password })
-    .then(async u => {
-        if (u) {
-            await Notify.create({ 
-                username,
-                notifyList: []
-            })
-            res.status(201).json({ user: u._id })
-        }
-    })
-    .catch(err => {
+    try {
+        const salt = await bcrypt.genSalt()
+        const hashedPassword = await bcrypt.hash(password, salt)
+
+        const user = await User.create({ 
+            username, 
+            password: hashedPassword
+        })
+        if (!user)
+            throw Error('Error happen when create user')
+        
+        await Notify.create({ 
+            username,
+            notifyList: []
+        })
+
+        res.status(201).json({ user: user._id })
+        
+    } catch(err) {
         const errors = handleErrors(err)
         res.status(400).json(errors)
-    })
+    }
 }
 
 function Login(req, res) {
@@ -77,6 +87,7 @@ function Login(req, res) {
         })
     })
     .catch(err => {
+        console.log('Loi: ', err)
         const errors = handleErrors(err)
         res.status(400).json(errors)
     })

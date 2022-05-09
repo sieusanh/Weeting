@@ -1,5 +1,5 @@
 import axios from 'axios'
-import {useState, useContext} from 'react'
+import {useState, useContext, useEffect} from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {AuthenContext} from '../../Context/AuthenContext'
 import {Container, Title, Form, Input, 
@@ -13,7 +13,7 @@ function Login() {
     const navigate = useNavigate()
     const authenContext = useContext(AuthenContext)
     const {setAuthen} = authenContext
-
+    
     function handleSubmit(event) {
         event.preventDefault()
         axios.post('/auth/login', {username, password})

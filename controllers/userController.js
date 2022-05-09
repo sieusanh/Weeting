@@ -40,7 +40,7 @@ const getUserByUsername = (req, res) => {
         if (!user)
             return res.json({message: '404'})
         const {_id: id, avatar} = user._doc
-        res.status(200).json({ id, avatar })
+        res.json({ id, avatar })
     })
     .catch(err => res.json(err))
 }

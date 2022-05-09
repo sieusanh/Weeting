@@ -13,19 +13,22 @@ function UserBoardToChat_Provider({ children }) {
 	})
 	const [groupChatId, setGroupChatId] = useState('')
 	const [notifyPeerChatId, setNotifyPeerChatId] = useState('')
+	const [newCreatedPeerChatId, setNewCreatedPeerChatId] = useState('')
+
 	// Stranger || Wait-for-accept || Friend
 	const [contactStatus, setContactStatus] = useState('Stranger') 
-	
 	const value = {
 		userId2,
 		peerChatInfo,
 		groupChatId,
 		notifyPeerChatId,
+		newCreatedPeerChatId,
 		contactStatus,
 		setUserId2,
 		setPeerChatInfo,
 		setGroupChatId,
 		setNotifyPeerChatId,
+		setNewCreatedPeerChatId,
 		setContactStatus
 	}
 	
