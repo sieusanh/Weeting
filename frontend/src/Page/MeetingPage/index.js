@@ -1,5 +1,5 @@
 import {useContext} from 'react'
-import MeetingBoard from '../../Component/ChatBoard'
+import MeetingBoard from '../../Component/MeetingBoard'
 import LoginAlert from '../../Component/LoginAlert'
 import { ThemeContext } from '../../Context/ThemeContext'
 import {Container} from './StyledComponent'
