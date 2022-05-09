@@ -41,7 +41,7 @@ function UserBoard() {
         notifyPeerChatId: notifyChatId, newCreatedPeerChatId } = userBoardToChat_Context
     const { notifyPeerChatId: notificationId, 
         notifyContactList } = notificationContext
-    console.log('peerList: ', peerList)
+        
     // Initialize lists
     useLayoutEffect(() => {
         switch(tab) {

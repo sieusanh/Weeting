@@ -57,7 +57,7 @@ connectDatabase()
 
 const httpServer = http.createServer(app)
 
-httpServer.listen(9090, () => console.log('Server is listening...'))
+httpServer.listen(process.env.PORT, () => console.log('Server is listening...'))
 const io = new Server(httpServer)
 
 // Development
